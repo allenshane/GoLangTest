@@ -1,0 +1,16 @@
+{
+    "directoriestocopy": {
+        "source": ["E:/go/copytest", "E:/go/copytest1", "E:/go/copytest2"],
+        "destination": "E:/go/pastetest/directories"
+    },
+    "mysqldb":{
+    	"username": "root",
+		"password": "password",
+		"dbs": ["local", "live", "test"],
+		"destination": "E:/go/pastetest/mysqldbs"
+    },
+    "compression": {
+    	"source": "E:/go/pastetest/",
+    	"destination": "E:/go/final.zip"
+    }
+}
