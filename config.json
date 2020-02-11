@@ -12,5 +12,11 @@
     "compression": {
     	"source": "E:/go/pastetest/",
     	"destination": "E:/go/final.zip"
+    },
+    "s3info": {
+    	"bucket": "golangtestallen",
+    	"region": "ap-south-1",
+    	"accesskey": "AKIAYB5FW6UZK3IVVT4V",
+    	"secretkey": "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"
     }
 }

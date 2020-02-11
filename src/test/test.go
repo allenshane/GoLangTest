@@ -9,6 +9,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 type Config struct {
@@ -26,6 +31,12 @@ type Config struct {
 		Source      string `json:"source"`
 		Destination string `json:"destination"`
 	} `json:"compression"`
+	S3Info struct {
+		Bucket    string `json:"bucket"`
+		Region    string `json:"region"`
+		AccessKey string `json:"accesskey"`
+		SecretKey string `json:"secretkey"`
+	} `json:"s3info"`
 }
 
 func LoadConfiguration(file string) (config Config, err error) {
@@ -82,24 +93,20 @@ func ZipWriter(source string, destination string) {
 	fmt.Println("Starting Compression...")
 	baseFolder := source
 
-	// Get a Buffer to Write To
 	outFile, err := os.Create(destination)
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer outFile.Close()
 
-	// Create a new zip archive.
 	w := zip.NewWriter(outFile)
 
-	// Add some files to the archive.
-	addFiles(w, baseFolder, "")
+	AddFiles(w, baseFolder, "")
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	// Make sure to check the error on Close.
 	err = w.Close()
 	if err != nil {
 		fmt.Println(err)
@@ -107,8 +114,7 @@ func ZipWriter(source string, destination string) {
 	fmt.Println("Compression Completed!!!")
 }
 
-func addFiles(w *zip.Writer, basePath, baseInZip string) {
-	// Open the Directory
+func AddFiles(w *zip.Writer, basePath, baseInZip string) {
 	files, err := ioutil.ReadDir(basePath)
 	if err != nil {
 		fmt.Println(err)
@@ -122,7 +128,6 @@ func addFiles(w *zip.Writer, basePath, baseInZip string) {
 				fmt.Println(err)
 			}
 
-			// Add some files to the archive.
 			f, err := w.Create(baseInZip + file.Name())
 			if err != nil {
 				fmt.Println(err)
@@ -133,14 +138,40 @@ func addFiles(w *zip.Writer, basePath, baseInZip string) {
 			}
 		} else if file.IsDir() {
 
-			// Recurse
 			newBase := basePath + file.Name() + "/"
 			fmt.Println("Recursing and Adding SubDir: " + file.Name())
 			fmt.Println("Recursing and Adding SubDir: " + newBase)
 
-			addFiles(w, newBase, baseInZip+file.Name()+"/")
+			AddFiles(w, newBase, baseInZip+file.Name()+"/")
 		}
 	}
+}
+
+func UploadToAws(filepath string, bucket string, region string, accesskey string, secretkey string) {
+	filename := filepath
+
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer file.Close()
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(accesskey, secretkey, "")},
+	)
+
+	uploader := s3manager.NewUploader(sess)
+	_, err = uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(filename),
+		Body:   file,
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Printf("Successfully uploaded %q\n", filename)
 }
 
 func main() {
@@ -149,4 +180,5 @@ func main() {
 	CopyDirectories(config.DirecoriesToCopy.Source, config.DirecoriesToCopy.Destination)
 	MysqlDump(config.Mysqldb.Username, config.Mysqldb.Password, config.Mysqldb.Dbs, config.Mysqldb.Destination)
 	ZipWriter(config.Compression.Source, config.Compression.Destination)
+	UploadToAws(config.Compression.Destination, config.S3Info.Bucket, config.S3Info.Region, config.S3Info.AccessKey, config.S3Info.SecretKey)
 }
