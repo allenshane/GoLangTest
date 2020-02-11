@@ -145,7 +145,7 @@ func addFiles(w *zip.Writer, basePath, baseInZip string) {
 
 func main() {
 	fmt.Println("Starting the app....")
-	config, _ := LoadConfiguration("E:/go/config.json")
+	config, _ := LoadConfiguration(os.Args[1])
 	CopyDirectories(config.DirecoriesToCopy.Source, config.DirecoriesToCopy.Destination)
 	MysqlDump(config.Mysqldb.Username, config.Mysqldb.Password, config.Mysqldb.Dbs, config.Mysqldb.Destination)
 	ZipWriter(config.Compression.Source, config.Compression.Destination)
